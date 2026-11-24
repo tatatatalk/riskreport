@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Risk management system</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <img src="logo.png" alt="Kokha Hospital" style="height:48px;width:48px;object-fit:contain;background:#fff;border-radius:10px;padding:3px;">
+    <div>
+      <div class="header-title">ระบบแจ้งเหตุการณ์ความเสี่ยง</div>
+      <div class="header-sub">Kokha Hospital · Risk Report</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="page-title">
+    <h2>แบบฟอร์มแจ้งเหตุการณ์ความเสี่ยง</h2>
+    <p>กรุณากรอกข้อมูลให้ครบถ้วน เพื่อการติดตามและแก้ไขที่มีประสิทธิภาพ</p>
+  </div>
+
+  <form id="riskForm" novalidate>
+
+    <!-- Section 1: Department + Event Info (merged) -->
+    <div class="card">
+      <div class="section-label"><span class="sec-num">1</span>ข้อมูลผู้แจ้งและเหตุการณ์</div>
+
+      <div class="field">
+        <label>หน่วยงานผู้แจ้ง <span class="req">*</span></label>
+        <select class="dept-select" id="deptSelect" onchange="selectDept(this.value, this)">
+          <option value="">— เลือกหน่วยงาน —</option>
+          <option value="งานพยาบาล">งานพยาบาล</option>
+          <option value="งานประกัน">งานประกัน</option>
+          <option value="งาน IT">งาน IT</option>
+        </select>
+        <div class="error-msg" id="err-dept">กรุณาเลือกหน่วยงานผู้แจ้ง</div>
+      </div>
+
+      <div class="date-time-row">
+        <div class="field" style="margin-bottom:0">
+          <label>วันที่เกิดเหตุ <span class="req">*</span></label>
+          <div class="date-selects" id="dateSelects">
+            <select id="dateDay" onchange="syncDateSelects()"><option value="">วัน</option></select>
+            <select id="dateMonth" onchange="syncDateSelects()">
+              <option value="">เดือน</option>
+              <option value="01">มกราคม</option><option value="02">กุมภาพันธ์</option>
+              <option value="03">มีนาคม</option><option value="04">เมษายน</option>
+              <option value="05">พฤษภาคม</option><option value="06">มิถุนายน</option>
+              <option value="07">กรกฎาคม</option><option value="08">สิงหาคม</option>
+              <option value="09">กันยายน</option><option value="10">ตุลาคม</option>
+              <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+            </select>
+            <select id="dateYear" onchange="syncDateSelects()"><option value="">ปี (พ.ศ.)</option></select>
+          </div>
+          <input type="hidden" id="eventDate" name="eventDate">
+          <div class="error-msg" id="err-date">กรุณาระบุวันที่เกิดเหตุ</div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>เวลา <span class="req">*</span></label>
+          <div class="time-picker-24">
+            <input type="text" id="timeH" class="time-num" inputmode="numeric" maxlength="2" placeholder="00">
+            <span class="time-colon">:</span>
+            <input type="text" id="timeM" class="time-num" inputmode="numeric" maxlength="2" placeholder="00">
+          </div>
+          <input type="hidden" id="eventTime" name="eventTime">
+          <div class="error-msg" id="err-time">กรุณาระบุเวลาเกิดเหตุ</div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-bottom:0;margin-top:20px">
+        <label>รายละเอียดเหตุการณ์ <span class="req">*</span></label>
+        <textarea id="eventDesc" name="eventDesc" placeholder="อธิบายเหตุการณ์ที่เกิดขึ้นโดยละเอียด..."></textarea>
+        <div class="error-msg" id="err-desc">กรุณาระบุรายละเอียดเหตุการณ์</div>
+      </div>
+    </div>
+
+    <!-- Section 4: Risk Level -->
+    <div class="card">
+      <div class="section-label"><span class="sec-num">2</span>ระดับความเสี่ยง</div>
+
+      <div class="risk-tabs">
+        <div class="risk-tab" id="tab-clinic" onclick="switchRiskTab('clinic')">
+          Clinical (ทางคลินิก)
+        </div>
+        <div class="risk-tab" id="tab-support" onclick="switchRiskTab('support')">
+          สนับสนุน
+        </div>
+      </div>
+
+      <div class="risk-panel" id="panel-clinic">
+        <div class="risk-grid" id="clinic-grid"></div>
+        <div class="risk-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#dbeafe"></div>A–C ต่ำ (Near Miss)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fdba74"></div>D–F ปานกลาง</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#9f1239"></div>G–I สูงมาก</div>
+        </div>
+      </div>
+
+      <div class="risk-panel" id="panel-support">
+        <div class="risk-grid" id="support-grid"></div>
+        <div class="risk-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#dbeafe"></div>1–2 ต่ำ</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fed7aa"></div>3 ปานกลาง</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#9f1239"></div>4–5 สูงมาก</div>
+        </div>
+      </div>
+
+      <div class="error-msg" id="err-risk">กรุณาเลือกระดับความเสี่ยง</div>
+    </div>
+
+    <!-- Section 5: Related Departments -->
+    <div class="card">
+      <div class="section-label"><span class="sec-num">3</span>หน่วยงานที่เกี่ยวข้อง</div>
+      <div class="multiselect" id="relDeptMulti">
+        <div class="multiselect-trigger" id="relDeptTrigger">
+          <div class="multiselect-tags" id="relDeptTags">
+            <span class="multiselect-placeholder" id="relDeptPlaceholder">— เลือกหน่วยงานที่เกี่ยวข้อง —</span>
+          </div>
+          <svg class="multiselect-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="multiselect-panel" id="relDeptPanel">
+          <div id="relDeptOptions"></div>
+        </div>
+      </div>
+      <div class="error-msg" id="err-reldept">กรุณาเลือกหน่วยงานที่เกี่ยวข้องอย่างน้อย 1 หน่วยงาน</div>
+    </div>
+
+    <!-- Section 6: Initial Fix -->
+    <div class="card">
+      <div class="section-label"><span class="sec-num">4</span>การแก้ไขเบื้องต้น</div>
+      <div class="field" style="margin-bottom:0">
+        <label>แนวทางการแก้ไขเบื้องต้น <span class="req">*</span></label>
+        <textarea id="initialFix" name="initialFix" placeholder="ระบุการแก้ไขเบื้องต้นที่ได้ดำเนินการแล้ว หรือแผนที่จะดำเนินการ..."></textarea>
+        <div class="error-msg" id="err-fix">กรุณาระบุการแก้ไขเบื้องต้น</div>
+      </div>
+    </div>
+
+    <!-- Section 7: File Attachment -->
+    <div class="card">
+      <div class="section-label"><span class="sec-num">5</span>แนบไฟล์หลักฐาน</div>
+      <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" multiple accept="*/*">
+        <div class="upload-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+        </div>
+        <p><strong>คลิกเพื่อเลือกไฟล์</strong> หรือลากไฟล์มาวาง</p>
+        <div class="size-hint">รองรับทุกประเภทไฟล์ · ขนาดสูงสุด 5MB ต่อไฟล์</div>
+      </div>
+      <div class="file-list" id="fileList"></div>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit" class="submit-btn">ส่งรายงานความเสี่ยง</button>
+  </form>
+</div>
+
+<!-- Success Modal -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="success-icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h3>ส่งรายงานเรียบร้อยแล้ว</h3>
+    <p>ทีมงานได้รับรายงานของคุณแล้ว<br>ขอบคุณที่ช่วยพัฒนาคุณภาพการดูแลผู้ป่วย</p>
+    <button class="modal-btn" onclick="resetForm()">แจ้งเหตุการณ์ใหม่</button>
+  </div>
+</div>
+
+<script>
+  // ---- Data ----
+  const DEPARTMENTS = ['งานพยาบาล', 'งานประกัน', 'งาน IT'];
+  const REL_DEPTS = [
+    { name: 'งานพยาบาล' },
+    { name: 'งานประกัน' },
+    { name: 'งาน IT' },
+    { name: 'งานแพทย์' },
+    { name: 'งานเภสัชกรรม' },
+    { name: 'งานบริหาร' },
+  ];
+  // ระดับ Clinical ตามมาตรฐาน NCC MERP (A=near miss → I=เสียชีวิต)
+  const CLINIC_LEVELS = ['A','B','C','D','E','F','G','H','I'];
+  // ระดับสนับสนุน 1-5 (1=ไม่เสียหาย, 5=ร้ายแรง)
+  const SUPPORT_LEVELS = ['1','2','3','4','5'];
+
+  // state ของฟอร์ม — เก็บ global แทน DOM เพื่อให้ validate ง่ายกว่า
+  let selectedDept = '';
+  let selectedRiskCategory = '';
+  let selectedRiskLevel = '';
+  let attachedFiles = [];  // array ของ { name, size, type, data: base64 }
+
+  // ---- Init ----
+  window.addEventListener('DOMContentLoaded', () => {
+    buildRiskButtons();
+    buildRelDepts();
+    initDate();
+    initTime24();
+    setupFileDrop();
+    document.getElementById('riskForm').addEventListener('submit', handleSubmit);
+  });
+
+  function initDate() {
+    const dayEl = document.getElementById('dateDay');
+    const yearEl = document.getElementById('dateYear');
+    for (let d = 1; d <= 31; d++) {
+      const o = new Option(d, String(d).padStart(2, '0'));
+      dayEl.appendChild(o);
+    }
+    const thisYear = new Date().getFullYear() + 543;
+    for (let y = thisYear; y >= thisYear - 10; y--) {
+      yearEl.appendChild(new Option(y, y));
+    }
+    const today = new Date();
+    dayEl.value = String(today.getDate()).padStart(2, '0');
+    document.getElementById('dateMonth').value = String(today.getMonth() + 1).padStart(2, '0');
+    yearEl.value = today.getFullYear() + 543;
+    syncDateSelects();
+  }
+
+  // แปลงวันที่จาก dropdown พ.ศ. → ISO YYYY-MM-DD (ค.ศ.) สำหรับ hidden input
+  // ต้องลบ 543 เพราะ JavaScript Date ใช้ ค.ศ. ทั้งหมด
+  function syncDateSelects() {
+    const d = document.getElementById('dateDay').value;
+    const m = document.getElementById('dateMonth').value;
+    const yBE = document.getElementById('dateYear').value;
+    if (d && m && yBE) {
+      const yCE = parseInt(yBE) - 543;
+      document.getElementById('eventDate').value = `${yCE}-${m}-${d}`;
+      hideError('err-date');
+    } else {
+      document.getElementById('eventDate').value = '';
+    }
+  }
+
+  function initTime24() {
+    const hEl = document.getElementById('timeH');
+    const mEl = document.getElementById('timeM');
+    hEl.addEventListener('input', syncTime24);
+    mEl.addEventListener('input', syncTime24);
+    hEl.addEventListener('blur', function() {
+      let v = parseInt(this.value);
+      if (isNaN(v) || v < 0) v = 0;
+      if (v > 23) v = 23;
+      this.value = v.toString().padStart(2, '0');
+      syncTime24();
+    });
+    mEl.addEventListener('blur', function() {
+      let v = parseInt(this.value);
+      if (isNaN(v) || v < 0) v = 0;
+      if (v > 59) v = 59;
+      this.value = v.toString().padStart(2, '0');
+      syncTime24();
+    });
+    setTime24ToNow();
+  }
+
+  function setTime24ToNow() {
+    const now = new Date();
+    document.getElementById('timeH').value = now.getHours().toString().padStart(2, '0');
+    document.getElementById('timeM').value = now.getMinutes().toString().padStart(2, '0');
+    syncTime24();
+  }
+
+  function syncTime24() {
+    const h = document.getElementById('timeH').value;
+    const m = document.getElementById('timeM').value;
+    document.getElementById('eventTime').value = (h !== '' && m !== '') ? `${h}:${m}` : '';
+    if (h && m) hideError('err-time');
+  }
+
+  function buildRiskButtons() {
+    const clinicData = [
+      { level: 'A', desc: 'มีโอกาสเกิดความคลาดเคลื่อน' },
+      { level: 'B', desc: 'เกิดแล้วแต่ยังไม่ถึงผู้ป่วย' },
+      { level: 'C', desc: 'ถึงผู้ป่วย ไม่เกิดอันตราย' },
+      { level: 'D', desc: 'ถึงผู้ป่วย ต้องเฝ้าระวัง' },
+      { level: 'E', desc: 'อันตรายชั่วคราว ต้องรักษาเพิ่ม' },
+      { level: 'F', desc: 'อันตรายชั่วคราว นอน รพ. นานขึ้น' },
+      { level: 'G', desc: 'อันตรายถาวร' },
+      { level: 'H', desc: 'ต้องช่วยชีวิต' },
+      { level: 'I', desc: 'เสียชีวิต' },
+    ];
+
+    const cg = document.getElementById('clinic-grid');
+    clinicData.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `risk-card level-${item.level.toLowerCase()}`;
+      btn.dataset.cat = 'clinic';
+      btn.dataset.val = item.level;
+      btn.innerHTML = `<div class="risk-letter">${item.level}</div><div class="risk-desc">${item.desc}</div>`;
+      btn.onclick = () => selectRisk(btn);
+      cg.appendChild(btn);
+    });
+
+    const supportData = [
+      { level: '1', desc: 'ไม่เกิดความเสียหาย' },
+      { level: '2', desc: 'เสียหายเล็กน้อย' },
+      { level: '3', desc: 'เสียหายปานกลาง' },
+      { level: '4', desc: 'เสียหายมาก' },
+      { level: '5', desc: 'เสียหายร้ายแรง' },
+    ];
+    const sg = document.getElementById('support-grid');
+    supportData.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `risk-card s-level-${item.level}`;
+      btn.dataset.cat = 'support';
+      btn.dataset.val = item.level;
+      btn.innerHTML = `<div class="risk-letter">${item.level}</div><div class="risk-desc">${item.desc}</div>`;
+      btn.onclick = () => selectRisk(btn);
+      sg.appendChild(btn);
+    });
+  }
+
+  function buildRelDepts() {
+    const optionsDiv = document.getElementById('relDeptOptions');
+    REL_DEPTS.forEach(d => {
+      const label = document.createElement('label');
+      label.className = 'multiselect-option';
+      label.innerHTML = `
+        <input type="checkbox" name="relDept" value="${d.name}">
+        <div class="option-check">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="2,6 5,9 10,3"/>
+          </svg>
+        </div>
+        <span>${d.name}</span>
+      `;
+      label.querySelector('input').addEventListener('change', function() {
+        label.classList.toggle('selected', this.checked);
+        updateRelDeptTags();
+      });
+      optionsDiv.appendChild(label);
+    });
+
+    document.getElementById('relDeptTrigger').addEventListener('click', () => {
+      document.getElementById('relDeptMulti').classList.toggle('open');
+      hideError('err-reldept');
+    });
+
+    document.addEventListener('click', e => {
+      if (!document.getElementById('relDeptMulti').contains(e.target)) {
+        document.getElementById('relDeptMulti').classList.remove('open');
+      }
+    });
+  }
+
+  function updateRelDeptTags() {
+    const checked = [...document.querySelectorAll('input[name="relDept"]:checked')];
+    const tagsDiv = document.getElementById('relDeptTags');
+    const placeholder = document.getElementById('relDeptPlaceholder');
+    tagsDiv.querySelectorAll('.rel-tag').forEach(t => t.remove());
+    if (checked.length === 0) {
+      placeholder.style.display = '';
+    } else {
+      placeholder.style.display = 'none';
+      checked.forEach(input => {
+        const tag = document.createElement('span');
+        tag.className = 'rel-tag';
+        tag.dataset.val = input.value;
+        tag.innerHTML = `${input.value}<button type="button" onclick="removeRelDept('${input.value}',event)">×</button>`;
+        tagsDiv.insertBefore(tag, placeholder);
+      });
+    }
+    hideError('err-reldept');
+  }
+
+  function removeRelDept(val, e) {
+    e.stopPropagation();
+    const cb = document.querySelector(`input[name="relDept"][value="${val}"]`);
+    if (cb) {
+      cb.checked = false;
+      cb.closest('.multiselect-option').classList.remove('selected');
+    }
+    updateRelDeptTags();
+  }
+
+  function setupFileDrop() {
+    const drop = document.getElementById('fileDrop');
+    const input = document.getElementById('fileInput');
+
+    ['dragenter','dragover'].forEach(e => {
+      drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(e => {
+      drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('dragover'); });
+    });
+    drop.addEventListener('drop', ev => handleFiles(ev.dataTransfer.files));
+    input.addEventListener('change', () => handleFiles(input.files));
+  }
+
+  // อ่านไฟล์เป็น base64 Data URL เพื่อเก็บลง localStorage
+  // ข้อจำกัด: localStorage ~5MB ต่อ origin — ถ้าแนบหลายไฟล์ใหญ่อาจ QuotaExceededError
+  function handleFiles(fileList) {
+    Array.from(fileList).forEach(file => {
+      if (file.size > 5 * 1024 * 1024) { alert(`ไฟล์ ${file.name} มีขนาดเกิน 5MB`); return; }
+      const reader = new FileReader();
+      reader.onload = e => {
+        attachedFiles.push({ name: file.name, size: file.size, type: file.type, data: e.target.result });
+        renderFileList();
+      };
+      reader.readAsDataURL(file);
+    });
+    document.getElementById('fileInput').value = '';  // reset input เพื่อให้เลือกไฟล์เดิมซ้ำได้
+  }
+
+  function renderFileList() {
+    const list = document.getElementById('fileList');
+    list.innerHTML = '';
+    attachedFiles.forEach((f, i) => {
+      const size = f.size < 1024 ? `${f.size} B` : f.size < 1048576 ? `${(f.size/1024).toFixed(1)} KB` : `${(f.size/1048576).toFixed(1)} MB`;
+      const el = document.createElement('div');
+      el.className = 'file-item';
+      el.innerHTML = `
+        <span class="file-name">${f.name}</span>
+        <span class="file-size">${size}</span>
+        <button type="button" class="remove-btn" onclick="removeFile(${i})">×</button>
+      `;
+      list.appendChild(el);
+    });
+  }
+
+  function removeFile(i) {
+    attachedFiles.splice(i, 1);
+    renderFileList();
+  }
+
+  // ---- Selection helpers ----
+  function selectDept(val, el) {
+    selectedDept = val;
+    el.classList.toggle('selected', val !== '');
+    hideError('err-dept');
+  }
+
+  function switchRiskTab(cat) {
+    document.getElementById('tab-clinic').className = 'risk-tab' + (cat === 'clinic' ? ' active-clinic' : '');
+    document.getElementById('tab-support').className = 'risk-tab' + (cat === 'support' ? ' active-support' : '');
+    document.getElementById('panel-clinic').className = 'risk-panel' + (cat === 'clinic' ? ' show' : '');
+    document.getElementById('panel-support').className = 'risk-panel' + (cat === 'support' ? ' show' : '');
+    selectedRiskCategory = cat;
+    selectedRiskLevel = '';
+    document.querySelectorAll('.risk-btn, .risk-card').forEach(b => b.classList.remove('selected'));
+    hideError('err-risk');
+  }
+
+  function selectRisk(btn) {
+    document.querySelectorAll('.risk-btn, .risk-card').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedRiskCategory = btn.dataset.cat;
+    selectedRiskLevel = btn.dataset.val;
+    hideError('err-risk');
+  }
+
+  function showError(id) { document.getElementById(id).classList.add('show'); }
+  function hideError(id) { document.getElementById(id).classList.remove('show'); }
+
+  // ---- Submit ----
+  function handleSubmit(e) {
+    e.preventDefault();
+    let valid = true;
+
+    if (!selectedDept) { showError('err-dept'); valid = false; }
+    const date = document.getElementById('eventDate').value;
+    if (!date) { showError('err-date'); valid = false; }
+    const time = document.getElementById('eventTime').value;
+    if (!time) { showError('err-time'); valid = false; }
+    const desc = document.getElementById('eventDesc').value.trim();
+    if (!desc) { showError('err-desc'); valid = false; }
+    if (!selectedRiskLevel) { showError('err-risk'); valid = false; }
+
+    const relDepts = [...document.querySelectorAll('input[name="relDept"]:checked')].map(x => x.value);
+    if (relDepts.length === 0) { showError('err-reldept'); valid = false; }
+
+    const fix = document.getElementById('initialFix').value.trim();
+    if (!fix) { showError('err-fix'); valid = false; }
+
+    // scroll ไปยัง error แรกสุดในหน้า เพื่อให้ user เห็นทันที
+    if (!valid) { document.querySelector('.error-msg.show')?.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+    const existing0 = JSON.parse(localStorage.getItem('riskReports') || '[]');
+    // ID เป็นเลขลำดับต่อเนื่อง (ไม่ใช่ UUID) — ถ้าลบรายการใน localStorage อาจซ้ำกันได้
+    const refId = String(existing0.length + 1);
+    const report = {
+      id: refId,
+      submittedAt: new Date().toISOString(),
+      department: selectedDept,
+      eventDate: date,
+      eventTime: time,
+      eventDesc: desc,
+      riskCategory: selectedRiskCategory,
+      riskLevel: selectedRiskLevel,
+      relatedDepts: relDepts,
+      initialFix: fix,
+      attachments: attachedFiles.map(f => ({ name: f.name, size: f.size, type: f.type, data: f.data })),
+      status: 'รอดำเนินการ',
+      adminNote: '',
+      lastModified: new Date().toISOString(),
+    };
+
+    existing0.unshift(report);
+    localStorage.setItem('riskReports', JSON.stringify(existing0));
+
+    document.getElementById('successModal').classList.add('show');
+  }
+
+  // reset ต้องจัดการ custom component แต่ละตัวด้วยตัวเอง
+  // เพราะ form.reset() ไม่รู้จัก state ใน JS (risk buttons, multiselect tags ฯลฯ)
+  function resetForm() {
+    document.getElementById('successModal').classList.remove('show');
+    document.getElementById('riskForm').reset();
+    selectedDept = ''; selectedRiskCategory = ''; selectedRiskLevel = ''; attachedFiles = [];
+    const deptSel = document.getElementById('deptSelect');
+    deptSel.value = '';
+    deptSel.classList.remove('selected');
+    document.querySelectorAll('.risk-btn, .risk-card').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('input[name="relDept"]').forEach(cb => { cb.checked = false; });
+    document.querySelectorAll('.multiselect-option').forEach(o => o.classList.remove('selected'));
+    document.getElementById('relDeptMulti').classList.remove('open');
+    updateRelDeptTags();
+    document.getElementById('tab-clinic').className = 'risk-tab';
+    document.getElementById('tab-support').className = 'risk-tab';
+    document.getElementById('panel-clinic').className = 'risk-panel';
+    document.getElementById('panel-support').className = 'risk-panel';
+    document.getElementById('fileList').innerHTML = '';
+    document.getElementById('eventDate').valueAsDate = new Date();
+    setTime24ToNow();
+  }
+</script>
+</body>
+</html>
